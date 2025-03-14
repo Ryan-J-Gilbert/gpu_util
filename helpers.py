@@ -1,5 +1,6 @@
 import subprocess
 import pandas as pd
+from datetime import datetime
 from io import StringIO
 import os
 
@@ -252,7 +253,6 @@ def aggregate_gpu_data(year: str) -> pd.DataFrame:
         pd.concat(all_months_df, ignore_index=True) if all_months_df else pd.DataFrame()
     )
 
-
 def process_projects_gpu_data(year: str, month: str, projects: list) -> pd.DataFrame:
     """
     Processes GPU usage data for a given year, month, and filters by specified projects.
@@ -287,3 +287,50 @@ def process_projects_gpu_data(year: str, month: str, projects: list) -> pd.DataF
     filtered_df = full_df[full_df["project_x"].isin(projects)]
 
     return filtered_df
+
+
+def process_gpu_data_range(start_date: str, end_date: str) -> pd.DataFrame:
+    """
+    Processes GPU usage data for a given date range by calling process_gpu_data 
+    for each month that falls within the range.
+
+    Parameters:
+        start_date (str): Start date in the format "YYYY-MM-DD".
+        end_date (str): End date in the format "YYYY-MM-DD".
+
+    Returns:
+        pd.DataFrame: A merged DataFrame containing job and GPU usage records 
+                      for the entire specified date range.
+    """
+    # Validate date format
+    try:
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+    except ValueError:
+        raise ValueError("Invalid date format. Expected 'YYYY-MM-DD'.")
+
+    # Ensure the start date is before the end date
+    if start_dt > end_dt:
+        raise ValueError("Start date must be earlier than or equal to the end date.")
+
+    # Generate list of (year, month) pairs differently
+    months_to_process = []
+    year, month = start_dt.year, start_dt.month
+
+    while (year, month) <= (end_dt.year, end_dt.month):
+        months_to_process.append((str(year)[-2:], f"{month:02d}"))  # Store last 2 digits of year
+        month += 1
+        if month > 12:  # If we exceed December, roll over to next year
+            month = 1
+            year += 1
+
+    # Process each month and merge results
+    all_dfs = []
+    for year, month in months_to_process:
+        print(f"Processing {year}-{month}...")
+        monthly_df = process_gpu_data(year, month)
+        if not monthly_df.empty:
+            all_dfs.append(monthly_df)
+
+    # Concatenate results
+    return pd.concat(all_dfs, ignore_index=True) if all_dfs else pd.DataFrame()
