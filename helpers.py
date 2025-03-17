@@ -188,7 +188,7 @@ def process_gpu_data(year: str, month: str) -> pd.DataFrame:
         f"/projectnb/rcsmetrics/accounting/data/scc/20{year}.csv"
     )
     gpu_jobs["task_string"] = gpu_jobs["task_number"].astype(str)
-    gpu_jobs.loc[~(gpu_jobs["options"].str.contains("-t")), "task_string"] = "undefined"
+    gpu_jobs.loc[~(gpu_jobs["options"].str.contains("-t") | gpu_jobs['task_number'] != 0), "task_string"] = "undefined"
     gpu_jobs["job_task"] = (
         gpu_jobs["job_number"].astype(str) + "." + gpu_jobs["task_string"].astype(str)
     )
